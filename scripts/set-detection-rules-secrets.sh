@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Reads cluster credentials and sets them as secrets in the detection-rules fork.
-# Run this after the initial terraform-dac deployment completes.
+# Sets cluster credentials as GitHub Secrets in both demo repos:
+#   stuartMoorhouse/detection-rules  (Python CLI workflows)
+#   stuartMoorhouse/terraform-dac    (Terraform rule deployment workflows)
 #
-# Usage: bash scripts/set-detection-rules-secrets.sh
-# Or with explicit values:
+# Run this after `terraform apply` in infra/ completes.
+#
+# Usage:
+#   bash scripts/set-detection-rules-secrets.sh
+#
+# Or supply values via environment to skip prompts:
 #   DEV_KIBANA_URL=https://... DEV_KIBANA_USERNAME=elastic DEV_KIBANA_PASSWORD=... \
 #   PROD_KIBANA_URL=https://... PROD_KIBANA_USERNAME=elastic PROD_KIBANA_PASSWORD=... \
 #   bash scripts/set-detection-rules-secrets.sh
@@ -21,11 +26,11 @@ check_deps() {
 
 check_deps
 
-REPO="stuartMoorhouse/detection-rules"
+DETECTION_RULES_REPO="stuartMoorhouse/detection-rules"
+TERRAFORM_DAC_REPO="stuartMoorhouse/terraform-dac"
 
-# If not provided via env, prompt the user to supply them
 if [ -z "${DEV_KIBANA_URL:-}" ]; then
-  echo "Could not auto-fetch cluster credentials. Please set these environment variables and re-run:"
+  echo "Cluster credentials not found in environment. Set these and re-run:"
   echo ""
   echo "  export DEV_KIBANA_URL=https://..."
   echo "  export DEV_KIBANA_USERNAME=elastic"
@@ -34,12 +39,10 @@ if [ -z "${DEV_KIBANA_URL:-}" ]; then
   echo "  export PROD_KIBANA_USERNAME=elastic"
   echo "  export PROD_KIBANA_PASSWORD=..."
   echo ""
-  echo "You can find these values by running:"
-  echo "  cd ../terraform-dac && terraform output"
+  echo "Find these values by running: cd infra && terraform output -json | jq"
   exit 1
 fi
 
-# Validate all required variables are present
 for var in DEV_KIBANA_URL DEV_KIBANA_USERNAME DEV_KIBANA_PASSWORD \
            PROD_KIBANA_URL PROD_KIBANA_USERNAME PROD_KIBANA_PASSWORD; do
   if [ -z "${!var:-}" ]; then
@@ -48,12 +51,24 @@ for var in DEV_KIBANA_URL DEV_KIBANA_USERNAME DEV_KIBANA_PASSWORD \
   fi
 done
 
-gh secret set DEV_KIBANA_URL      --repo "$REPO" --body "$DEV_KIBANA_URL"
-gh secret set DEV_KIBANA_USERNAME --repo "$REPO" --body "$DEV_KIBANA_USERNAME"
-gh secret set DEV_KIBANA_PASSWORD --repo "$REPO" --body "$DEV_KIBANA_PASSWORD"
-gh secret set PROD_KIBANA_URL     --repo "$REPO" --body "$PROD_KIBANA_URL"
-gh secret set PROD_KIBANA_USERNAME --repo "$REPO" --body "$PROD_KIBANA_USERNAME"
-gh secret set PROD_KIBANA_PASSWORD --repo "$REPO" --body "$PROD_KIBANA_PASSWORD"
+echo "=== Setting secrets in $DETECTION_RULES_REPO ==="
+gh secret set DEV_KIBANA_URL       --repo "$DETECTION_RULES_REPO" --body "$DEV_KIBANA_URL"
+gh secret set DEV_KIBANA_USERNAME  --repo "$DETECTION_RULES_REPO" --body "$DEV_KIBANA_USERNAME"
+gh secret set DEV_KIBANA_PASSWORD  --repo "$DETECTION_RULES_REPO" --body "$DEV_KIBANA_PASSWORD"
+gh secret set PROD_KIBANA_URL      --repo "$DETECTION_RULES_REPO" --body "$PROD_KIBANA_URL"
+gh secret set PROD_KIBANA_USERNAME --repo "$DETECTION_RULES_REPO" --body "$PROD_KIBANA_USERNAME"
+gh secret set PROD_KIBANA_PASSWORD --repo "$DETECTION_RULES_REPO" --body "$PROD_KIBANA_PASSWORD"
+echo "Done."
 
-echo "Secrets set in $REPO"
-echo "The detection-rules fork is now fully configured."
+echo ""
+echo "=== Setting secrets in $TERRAFORM_DAC_REPO ==="
+# deploy-dev.yml uses DEV_KIBANA_URL / DEV_KIBANA_PASSWORD
+# deploy-main.yml uses PROD_KIBANA_URL / PROD_KIBANA_PASSWORD
+gh secret set DEV_KIBANA_URL       --repo "$TERRAFORM_DAC_REPO" --body "$DEV_KIBANA_URL"
+gh secret set DEV_KIBANA_PASSWORD  --repo "$TERRAFORM_DAC_REPO" --body "$DEV_KIBANA_PASSWORD"
+gh secret set PROD_KIBANA_URL      --repo "$TERRAFORM_DAC_REPO" --body "$PROD_KIBANA_URL"
+gh secret set PROD_KIBANA_PASSWORD --repo "$TERRAFORM_DAC_REPO" --body "$PROD_KIBANA_PASSWORD"
+echo "Done."
+
+echo ""
+echo "Both repos are now fully configured."

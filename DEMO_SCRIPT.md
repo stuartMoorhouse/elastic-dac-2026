@@ -2,16 +2,24 @@
 
 ## Setup (before the demo)
 
-1. Export your Elastic Cloud API key: `export EC_API_KEY=<your-key>`
-2. Run bootstrap: `bash scripts/setup.sh`
-   - Creates `stuartMoorhouse/terraform-dac` (private) and pushes local content
-   - Forks `elastic/detection-rules` to `stuartMoorhouse/detection-rules`
-   - Cleans inherited branches, creates `dev`, pushes DaC workflows, sets branch protection
-3. Trigger initial Terraform deployment (creates Dev and Prod clusters):
-   `gh workflow run deploy-dev.yml --repo stuartMoorhouse/terraform-dac`
-4. Once deployment completes, set cluster secrets in the detection-rules fork:
-   `bash scripts/set-detection-rules-secrets.sh`
-   (requires `DEV_KIBANA_URL`, `DEV_KIBANA_PASSWORD`, `PROD_KIBANA_URL`, `PROD_KIBANA_PASSWORD`, etc.)
+1. Fork the detection-rules repo (the only thing Terraform can't do):
+   ```bash
+   bash scripts/setup.sh
+   ```
+   This forks `elastic/detection-rules`, creates the `dev` branch, strips
+   inherited workflows, and pushes the DaC demo workflows.
+
+2. Provision everything else with one `terraform apply`:
+   ```bash
+   export TF_VAR_ec_api_key=<your Elastic Cloud API key>
+   export GITHUB_TOKEN=$(gh auth token)
+   cd infra/
+   terraform init
+   terraform apply
+   ```
+   This creates the `terraform-dac` repo (and pushes content), provisions
+   Dev + Prod Elastic Cloud clusters, and sets branch protection and secrets
+   in both repos automatically.
 
 ---
 
@@ -89,8 +97,10 @@ Closes open PRs and deletes `feature/*`, `feat/*`, `fix/*` branches in the detec
 ## Teardown (after the demo)
 
 ```bash
+export GITHUB_TOKEN=$(gh auth token)
 bash scripts/teardown.sh
 ```
 
-Deletes `stuartMoorhouse/detection-rules` and `stuartMoorhouse/terraform-dac`.
-Destroy Elastic Cloud clusters first: `cd ../terraform-dac && terraform destroy`
+Runs `terraform destroy` in `infra/` (removes the `terraform-dac` repo, branch
+protection, secrets, and Elastic Cloud clusters), then deletes the
+`detection-rules` fork.

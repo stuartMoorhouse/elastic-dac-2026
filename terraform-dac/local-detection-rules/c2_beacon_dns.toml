@@ -1,0 +1,51 @@
+[metadata]
+creation_date = "2026/05/04"
+maturity = "development"
+updated_date = "2026/05/04"
+
+[rule]
+author = ["Elastic"]
+description = """
+Detects hosts generating an unusually high volume of DNS queries within a short window, which may
+indicate C2 beaconing activity using DNS as a covert channel. Excludes .local queries to reduce
+noise from mDNS and local service discovery.
+"""
+enabled = false
+false_positives = ["DNS-heavy applications or CDN prefetching on known hosts"]
+from = "now-9m"
+index = ["logs-endpoint.events.*", "packetbeat-*", "auditbeat-*"]
+language = "kuery"
+license = "Elastic License v2"
+name = "Potential C2 Beacon via High-Frequency DNS Queries"
+risk_score = 73
+rule_id = "c3d4e5f6-3333-4444-5555-ccddeeff0022"
+severity = "high"
+tags = ["Domain: Endpoint", "Use Case: Threat Detection", "Tactic: Command and Control"]
+type = "threshold"
+version = 1
+
+query = '''
+event.category : "network" and network.protocol : "dns" and not dns.question.name : "*.local"
+'''
+
+[rule.threshold]
+field = ["host.name"]
+value = 100
+
+[[rule.threat]]
+framework = "MITRE ATT&CK"
+
+[rule.threat.tactic]
+id = "TA0011"
+name = "Command and Control"
+reference = "https://attack.mitre.org/tactics/TA0011/"
+
+[[rule.threat.technique]]
+id = "T1071"
+name = "Application Layer Protocol"
+reference = "https://attack.mitre.org/techniques/T1071/"
+
+[[rule.threat.technique.subtechnique]]
+id = "T1071.004"
+name = "DNS"
+reference = "https://attack.mitre.org/techniques/T1071/004/"
