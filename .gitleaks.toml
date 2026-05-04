@@ -2,10 +2,11 @@
 useDefault = true
 
 [allowlist]
-description = "Exclude local-only artefacts that are gitignored but still scanned by --no-git"
+description = "Exclude local-only artefacts and example/template files"
 paths = [
   '''.*\.tfstate$''',
   '''.*\.tfstate\.backup$''',
   '''.*\.tfplan$''',
   '''.*\.pem$''',
+  '''.*terraform\.tfvars\.example$''',
 ]
