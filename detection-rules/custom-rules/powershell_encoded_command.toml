@@ -1,0 +1,47 @@
+[metadata]
+creation_date = "2026/05/04"
+maturity = "development"
+updated_date = "2026/05/04"
+
+[rule]
+author = ["Elastic"]
+description = """
+Identifies the use of PowerShell's -EncodedCommand flag, which executes a Base64-encoded command string.
+Attackers commonly use this technique to obfuscate malicious payloads and bypass command-line logging.
+"""
+enabled = false
+false_positives = []
+from = "now-9m"
+index = ["logs-endpoint.events.*", "winlogbeat-*", "endgame-*"]
+language = "kuery"
+license = "Elastic License v2"
+name = "Suspicious PowerShell Encoded Command Execution"
+risk_score = 47
+rule_id = "a1b2c3d4-1111-2222-3333-aabbccddeeff"
+severity = "medium"
+tags = ["Domain: Endpoint", "OS: Windows", "Use Case: Threat Detection", "Tactic: Execution"]
+timestamp_override = "event.ingested"
+type = "query"
+version = 1
+
+query = '''
+process.name : "powershell.exe" and process.args : ("-enc" or "-EncodedCommand" or "-encodedcommand")
+'''
+
+[[rule.threat]]
+framework = "MITRE ATT&CK"
+
+[rule.threat.tactic]
+id = "TA0002"
+name = "Execution"
+reference = "https://attack.mitre.org/tactics/TA0002/"
+
+[[rule.threat.technique]]
+id = "T1059"
+name = "Command and Scripting Interpreter"
+reference = "https://attack.mitre.org/techniques/T1059/"
+
+[[rule.threat.technique.subtechnique]]
+id = "T1059.001"
+name = "PowerShell"
+reference = "https://attack.mitre.org/techniques/T1059/001/"

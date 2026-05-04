@@ -1,0 +1,66 @@
+name: Deploy to Dev
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  validate-rules:
+    name: Validate Detection Rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install detection-rules CLI
+        run: pip install elastic-detection-rules
+
+      - name: Validate TOML rules
+        run: |
+          PASS=0
+          FAIL=0
+          for f in detection-rules/custom-rules/*.toml; do
+            [ -f "$f" ] || continue
+            if python -m detection_rules validate-rule "$f"; then
+              echo "PASS: $f"
+              PASS=$((PASS + 1))
+            else
+              echo "FAIL: $f"
+              FAIL=$((FAIL + 1))
+            fi
+          done
+          echo "Results: $PASS passed, $FAIL failed"
+          [ "$FAIL" -eq 0 ]
+
+  deploy:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    needs: validate-rules
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '~> 1.5'
+
+      - name: Terraform Init
+        run: terraform -chdir=terraform init
+        env:
+          EC_API_KEY: ${{ secrets.EC_API_KEY }}
+
+      - name: Terraform Apply (Dev)
+        run: terraform -chdir=terraform apply -auto-approve -var="environment=dev"
+        env:
+          EC_API_KEY: ${{ secrets.EC_API_KEY }}
+          TF_VAR_ec_api_key: ${{ secrets.EC_API_KEY }}
+
+      - name: Print Dev Kibana URL
+        run: terraform -chdir=terraform output dev_kibana_endpoint
+        env:
+          EC_API_KEY: ${{ secrets.EC_API_KEY }}
+          TF_VAR_ec_api_key: ${{ secrets.EC_API_KEY }}
