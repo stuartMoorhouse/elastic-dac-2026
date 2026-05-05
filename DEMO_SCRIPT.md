@@ -37,6 +37,10 @@ cd ../detection-rules
 source env/bin/activate
 ```
 
+### Terraform environment
+cd ../terraform-dac/terraform
+terraform init
+
 ---
 
 ## The two demo repos
@@ -67,12 +71,7 @@ Dev Elastic cluster = sandbox. Rules are authored and tested there manually. Pro
 
 Audience sees: `stuartMoorhouse/detection-rules`
 
-**1. Show what DaC looks like at rest:**
-- Open `custom-rules/rules/powershell_encoded_command.toml`
-- Fields map directly to the Kibana rule editor — query, severity, MITRE ATT&CK — but stored as plain text in Git
-- Same TOML format Elastic's own engineers use for built-in rules
-
-**2. Author a new rule using the Dev cluster as a sandbox:**
+**1. Author a new rule using the Dev cluster as a sandbox:**
 
 Create a feature branch first (in the `../detection-rules` directory):
 ```bash
@@ -107,7 +106,7 @@ python -m detection_rules kibana export-rules \
   --directory custom-rules/rules/
 ```
 
-**3. Push through the pipeline:**
+**2. Push through the pipeline:**
 ```bash
 git add custom-rules/rules/
 git commit -m "feat: add C2 beacon detection for known malicious infrastructure"
@@ -125,8 +124,8 @@ git push origin feature/c2-beacon-detection
 ---
 
 ## 4. Scenario 2: Terraform-native HCL (Repo 2)
+cd ../terraform-dac/terraform
 
-Audience sees: `stuartMoorhouse/terraform-dac`
 
 - Open `rules_hcl.tf`
 - The "Service Account Interactive Login" rule is a plain Terraform resource — show the exception list alongside it
@@ -153,6 +152,14 @@ Audience sees: `stuartMoorhouse/terraform-dac`
 - Pattern: `fileset()` discovers every `.toml` in `local-detection-rules/`, `toml::decode()` parses it, `for_each` creates one Elastic rule resource per file
 - Adding a new rule = drop in a TOML file, no Terraform edits required
 - Best of both worlds: detection engineers write human-readable TOML; Terraform handles deployment across environments
+
+**Show what DaC looks like at rest:**
+- Open `local-detection-rules/` — three rules are already present:
+  - `powershell_encoded_command.toml` — Suspicious PowerShell Encoded Command Execution
+  - `lateral_movement_psexec.toml` — Potential Lateral Movement via PsExec
+  - `c2_beacon_dns.toml` — Potential C2 Beacon via High-Frequency DNS
+- Fields map directly to the Kibana rule editor — query, severity, MITRE ATT&CK — but stored as plain text in Git
+- Same TOML format Elastic's own engineers use for built-in rules
 
 **Push through the pipeline:**
 - Add a `.toml` file, create a feature branch, open a PR to `main`
