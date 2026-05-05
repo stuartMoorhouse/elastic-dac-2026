@@ -15,6 +15,7 @@ INFRA_DIR="$SCRIPT_DIR/../infra"
 if [ -f "$INFRA_DIR/terraform.tfstate" ]; then
   echo "Running terraform destroy in infra/..."
   export GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token)}"
+  export TF_VAR_ec_api_key="${TF_VAR_ec_api_key:-$EC_API_KEY}"
   terraform -chdir="$INFRA_DIR" destroy -auto-approve
 else
   echo "No terraform state found in infra/ — skipping terraform destroy."

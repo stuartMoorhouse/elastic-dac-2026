@@ -71,16 +71,27 @@ if gh api "repos/$GITHUB_USER/detection-rules" &>/dev/null; then
   echo "Fork already exists — skipping"
 else
   gh repo fork elastic/detection-rules --clone=false
-  echo "Waiting for fork to be ready..."
+  echo "Waiting 5s for fork to be ready..."
   sleep 5
 fi
 
 # Delete all branches except main and dev (elastic/detection-rules has hundreds)
-echo "Cleaning up inherited branches..."
+echo "Cleaning up inherited branches (fetching branch list, may be slow)..."
 BRANCHES=$(gh api "repos/$GITHUB_USER/detection-rules/branches" --paginate --jq '.[].name' 2>/dev/null | grep -v '^main$' | grep -v '^dev$' || true)
-for branch in $BRANCHES; do
-  gh api -X DELETE "repos/$GITHUB_USER/detection-rules/git/refs/heads/$branch" 2>/dev/null || true
-done
+BRANCH_COUNT=$(echo "$BRANCHES" | grep -c . 2>/dev/null || true)
+if [ "${BRANCH_COUNT:-0}" -gt 0 ]; then
+  echo "  Found $BRANCH_COUNT branches to delete (this may take a minute)..."
+  i=0
+  for branch in $BRANCHES; do
+    i=$((i + 1))
+    if [ $((i % 10)) -eq 1 ] || [ "$i" -eq "$BRANCH_COUNT" ]; then
+      echo "  [$i/$BRANCH_COUNT] Deleting: $branch"
+    fi
+    gh api -X DELETE "repos/$GITHUB_USER/detection-rules/git/refs/heads/$branch" 2>/dev/null || true
+  done
+else
+  echo "  No inherited branches to clean up"
+fi
 echo "Branch cleanup complete"
 
 # Create dev branch
@@ -107,6 +118,7 @@ for wf in $WORKFLOW_FILES; do
   if echo " $OUR_WORKFLOWS " | grep -q " $wf "; then
     continue
   fi
+  echo "  Removing inherited workflow: $wf"
   SHA=$(gh api "repos/$GITHUB_USER/detection-rules/contents/.github/workflows/$wf" --jq '.sha' 2>/dev/null || true)
   if [ -n "$SHA" ]; then
     gh api -X DELETE "repos/$GITHUB_USER/detection-rules/contents/.github/workflows/$wf" \
