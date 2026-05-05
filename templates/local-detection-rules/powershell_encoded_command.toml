@@ -22,8 +22,6 @@ severity = "medium"
 tags = ["Domain: Endpoint", "OS: Windows", "Use Case: Threat Detection", "Tactic: Execution"]
 timestamp_override = "event.ingested"
 type = "query"
-version = 1
-
 query = '''
 process.name : "powershell.exe" and process.args : ("-enc" or "-EncodedCommand" or "-encodedcommand")
 '''

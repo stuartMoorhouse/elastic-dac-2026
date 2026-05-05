@@ -216,7 +216,9 @@ if [ ! -d "$DEMO_DIR/detection-rules" ]; then
   gh repo clone "$GITHUB_USER/detection-rules" "$DEMO_DIR/detection-rules"
   echo "Cloned detection-rules to $DEMO_DIR/detection-rules"
 else
-  echo "detection-rules already exists at $DEMO_DIR/detection-rules — skipping clone"
+  echo "detection-rules already exists at $DEMO_DIR/detection-rules — pulling latest main"
+  git -C "$DEMO_DIR/detection-rules" checkout main 2>/dev/null || true
+  git -C "$DEMO_DIR/detection-rules" pull origin main
 fi
 
 # Configure the detection-rules CLI to talk to the Dev cluster.
