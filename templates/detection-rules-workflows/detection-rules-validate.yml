@@ -25,7 +25,9 @@ jobs:
           python-version: '3.12'
           cache: pip
       - name: Install detection-rules CLI
-        run: pip install elastic-detection-rules
+        run: |
+          pip install -e ".[dev]"
+          pip install lib/kql lib/kibana
       - name: Validate TOML rules
         run: |
           PASS=0; FAIL=0

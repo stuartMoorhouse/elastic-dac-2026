@@ -62,8 +62,6 @@ terraform/                  Terraform configuration
 
 local-detection-rules/      TOML rule files consumed by rules_toml.tf (Scenario 3)
   powershell_encoded_command.toml
-  lateral_movement_psexec.toml
-  c2_beacon_dns.toml
 
 detection-rules-workflows/  Workflow files for the detection-rules fork (Repo 1)
   ci.yml                    Validate rules on feature branches / PRs

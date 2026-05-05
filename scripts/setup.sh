@@ -198,6 +198,14 @@ terraform -chdir="$INFRA_DIR" init -upgrade -input=false -no-color 2>&1 | tail -
 terraform -chdir="$INFRA_DIR" apply -auto-approve -input=false
 
 # ---------------------------------------------------------------------------
+# Load test data into Dev cluster for Scenario 1
+# ---------------------------------------------------------------------------
+
+echo ""
+echo "=== Loading test data ==="
+bash "$SCRIPT_DIR/load-test-data.sh"
+
+# ---------------------------------------------------------------------------
 # Clone demo repos for presentation
 # ---------------------------------------------------------------------------
 
@@ -210,6 +218,35 @@ if [ ! -d "$DEMO_DIR/detection-rules" ]; then
 else
   echo "detection-rules already exists at $DEMO_DIR/detection-rules — skipping clone"
 fi
+
+# Configure the detection-rules CLI to talk to the Dev cluster.
+# The CLI only supports API key auth — username/password are ignored for kibana subcommands.
+echo "Configuring detection-rules CLI for Dev cluster..."
+DEV_ES_URL=$(terraform -chdir="$INFRA_DIR" output -raw dev_elasticsearch_endpoint)
+DEV_ES_USER=$(terraform -chdir="$INFRA_DIR" output -raw dev_elasticsearch_username)
+DEV_ES_PASS=$(terraform -chdir="$INFRA_DIR" output -raw dev_elasticsearch_password)
+DEV_KB_URL=$(terraform -chdir="$INFRA_DIR" output -raw dev_kibana_endpoint)
+
+API_KEY_RESPONSE=$(curl -sf -X POST "$DEV_ES_URL/_security/api_key" \
+  -u "$DEV_ES_USER:$DEV_ES_PASS" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"detection-rules-cli","metadata":{"created_by":"setup.sh"}}')
+ENCODED_API_KEY=$(printf '%s' "$API_KEY_RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['encoded'])")
+
+if [ -z "$ENCODED_API_KEY" ] || [ "$ENCODED_API_KEY" = "null" ]; then
+  echo "Error: failed to mint API key for detection-rules CLI. Response: $API_KEY_RESPONSE" >&2
+  exit 1
+fi
+
+cat > "$DEMO_DIR/detection-rules/.detection-rules-cfg.json" <<EOF
+{
+  "custom_rules_dir": "custom-rules",
+  "kibana_url": "$DEV_KB_URL",
+  "elasticsearch_url": "$DEV_ES_URL",
+  "api_key": "$ENCODED_API_KEY"
+}
+EOF
+echo "Written .detection-rules-cfg.json (Dev cluster, API key auth)"
 
 if [ ! -d "$DEMO_DIR/terraform-dac" ]; then
   gh repo clone "$GITHUB_USER/terraform-dac" "$DEMO_DIR/terraform-dac"

@@ -25,5 +25,10 @@ reset_repo() {
 reset_repo "detection-rules"
 reset_repo "terraform-dac"
 
+# Reload test data so Dev cluster is fresh for the next run
+echo ""
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+bash "$SCRIPT_DIR/load-test-data.sh"
+
 echo ""
 echo "Reset complete."

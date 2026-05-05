@@ -15,6 +15,28 @@ This single command does everything:
 
 Prerequisites: `gh` (authenticated as your main account), `git`, `terraform >= 1.8`, `EC_API_KEY` and `DETECTION_TEAM_LEAD_TOKEN` set.
 
+### Python environment (detection-rules repo)
+
+The export command in Scenario 1 requires the `detection-rules` CLI. Set this up once after `setup.sh` completes:
+
+```bash
+cd ../detection-rules
+python3 --version          # must be 3.12+; install via: brew install python@3.12
+python3 -m venv env
+source env/bin/activate
+pip install --upgrade pip
+pip install -e ".[dev]"    # installs from the fork's own source (~2-3 min first time)
+pip install lib/kql lib/kibana
+python -m detection_rules --help   # verify install
+```
+
+Keep the venv active in the terminal you use for the demo. Before each session:
+
+```bash
+cd ../detection-rules
+source env/bin/activate
+```
+
 ---
 
 ## The two demo repos
@@ -45,34 +67,56 @@ Dev Elastic cluster = sandbox. Rules are authored and tested there manually. Pro
 
 Audience sees: `stuartMoorhouse/detection-rules`
 
-**Show what DaC looks like at rest:**
+**1. Show what DaC looks like at rest:**
 - Open `custom-rules/rules/powershell_encoded_command.toml`
 - Fields map directly to the Kibana rule editor — query, severity, MITRE ATT&CK — but stored as plain text in Git
 - Same TOML format Elastic's own engineers use for built-in rules
 
-**Author a new rule using the Dev cluster as a sandbox:**
-- Open Dev Kibana, navigate to Security > Rules, create a new rule via the UI
-- Once satisfied, export it to TOML using the CLI (install once with `pip install elastic-detection-rules`):
-  ```bash
-  python -m detection_rules kibana export-rules \
-    --kibana-url $DEV_KIBANA_URL \
-    -u elastic -p $DEV_KIBANA_PASSWORD \
-    --custom-rules-only \
-    --directory custom-rules/rules/
-  ```
-- The exported TOML file is now under version control
+**2. Author a new rule using the Dev cluster as a sandbox:**
 
-**Push through the pipeline:**
+Create a feature branch first (in the `../detection-rules` directory):
 ```bash
-git checkout -b feature/detect-mimikatz
-git add custom-rules/rules/mimikatz_lsass_access.toml
-git commit -m "feat: add Mimikatz LSASS access detection"
-git push origin feature/detect-mimikatz
+git checkout -b feature/c2-beacon-detection
+```
+
+Setup has already loaded test data into Dev — 8 malicious C2 beacon events (outbound to
+`185.220.101.0/24` and `194.147.78.0/24`, <1 KB payload) and 4 legitimate/excluded events.
+
+- Open Dev Kibana → Security > Rules → Create new rule → Custom query
+- Set index pattern: `logs-network_traffic-default`
+- Enter the query:
+  ```
+  event.category:network and
+  network.direction:outbound and
+  destination.ip:(185.220.101.0/24 or 194.147.78.0/24) and
+  network.bytes < 1024 and
+  not user.name:(security_scanner or backup_service)
+  ```
+- Click "Test" — should return 8 matching documents
+- Fill in rule details:
+  - Name: `Outbound C2 Beacon to Known Malicious Infrastructure`
+  - Severity: High / Risk score: 73
+  - MITRE: TA0011 Command and Control → T1071.001 Web Protocols
+- Save the rule
+
+Export to TOML (with the venv active — credentials come from `.detection-rules-cfg.json` written by setup.sh):
+```bash
+python -m detection_rules kibana export-rules \
+  --custom-rules-only \
+  --strip-version \
+  --directory custom-rules/rules/
+```
+
+**3. Push through the pipeline:**
+```bash
+git add custom-rules/rules/
+git commit -m "feat: add C2 beacon detection for known malicious infrastructure"
+git push origin feature/c2-beacon-detection
 ```
 - CI runs "Validate Detection Rules" on push — schema + query syntax checked before any cluster is touched
 - Open a PR to `main`:
   ```bash
-  gh pr create --base main --title "feat: Mimikatz LSASS access"
+  gh pr create --base main --title "feat: C2 beacon detection for known malicious infrastructure"
   ```
 - Log in as `detection-team-lead`, review and approve the PR
 - Merge — CI deploys the rule to Prod Kibana automatically
@@ -80,7 +124,7 @@ git push origin feature/detect-mimikatz
 
 ---
 
-## Scenario 2: Terraform-native HCL (Repo 2)
+## 4. Scenario 2: Terraform-native HCL (Repo 2)
 
 Audience sees: `stuartMoorhouse/terraform-dac`
 
@@ -101,7 +145,7 @@ Audience sees: `stuartMoorhouse/terraform-dac`
 
 ---
 
-## Scenario 3: TOML + Terraform for_each (Repo 2)
+## 5. Scenario 3: TOML + Terraform for_each (Repo 2)
 
 Audience sees: `stuartMoorhouse/terraform-dac`
 

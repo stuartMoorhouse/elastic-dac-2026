@@ -1,3 +1,8 @@
+output "dev_elasticsearch_endpoint" {
+  description = "Elasticsearch HTTPS endpoint for the Dev cluster"
+  value       = ec_deployment.dev.elasticsearch.https_endpoint
+}
+
 output "dev_kibana_endpoint" {
   description = "Kibana HTTPS endpoint for the Dev cluster"
   value       = ec_deployment.dev.kibana.https_endpoint
