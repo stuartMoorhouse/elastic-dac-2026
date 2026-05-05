@@ -53,7 +53,7 @@ echo ""
 
 echo "=== Forking elastic/detection-rules ==="
 
-gh repo fork elastic/detection-rules --org "" --clone=false 2>/dev/null || true
+gh repo fork elastic/detection-rules --clone=false 2>/dev/null || true
 
 echo "Waiting for fork to be ready..."
 sleep 5
