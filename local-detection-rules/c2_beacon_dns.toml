@@ -1,0 +1,46 @@
+[metadata]
+creation_date = "2026/05/04"
+maturity = "development"
+updated_date = "2026/05/04"
+
+[rule]
+author = ["Elastic"]
+description = """
+Detects a high frequency of DNS queries from a single host within a short window, which may indicate
+DNS-based command-and-control beaconing. Malware commonly uses DNS to tunnel data or receive instructions
+because DNS traffic is rarely blocked.
+"""
+enabled = false
+false_positives = ["CDN or streaming clients generating high legitimate DNS volume"]
+from = "now-9m"
+index = ["logs-endpoint.events.*", "packetbeat-*", "logs-network_traffic.*"]
+language = "kuery"
+license = "Elastic License v2"
+name = "Potential C2 Beacon via High-Frequency DNS"
+risk_score = 47
+rule_id = "c3d4e5f6-3333-4444-5555-ccddeeff0022"
+severity = "medium"
+tags = ["Domain: Network", "Use Case: Threat Detection", "Tactic: Command and Control"]
+timestamp_override = "event.ingested"
+type = "query"
+query = '''
+event.category : "network" and network.protocol : "dns" and dns.question.type : "A"
+'''
+
+[[rule.threat]]
+framework = "MITRE ATT&CK"
+
+[rule.threat.tactic]
+id = "TA0011"
+name = "Command and Control"
+reference = "https://attack.mitre.org/tactics/TA0011/"
+
+[[rule.threat.technique]]
+id = "T1071"
+name = "Application Layer Protocol"
+reference = "https://attack.mitre.org/techniques/T1071/"
+
+[[rule.threat.technique.subtechnique]]
+id = "T1071.004"
+name = "DNS"
+reference = "https://attack.mitre.org/techniques/T1071/004/"

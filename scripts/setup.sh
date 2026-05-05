@@ -168,7 +168,7 @@ gh api -X PUT "repos/$GITHUB_USER/detection-rules/actions/permissions/workflow" 
 echo "Enabled Actions PR creation permission"
 
 # Seed custom-rules/rules/ with the example TOML rule for Scenario 1
-for toml_file in "$TEMPLATES_DIR/local-detection-rules"/*.toml; do
+for toml_file in "$REPO_DIR/local-detection-rules"/*.toml; do
   [ -f "$toml_file" ] || continue
   toml_name=$(basename "$toml_file")
   toml_content=$(base64 < "$toml_file")

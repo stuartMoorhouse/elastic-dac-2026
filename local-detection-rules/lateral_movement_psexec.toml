@@ -1,0 +1,40 @@
+[metadata]
+creation_date = "2026/05/04"
+maturity = "development"
+updated_date = "2026/05/04"
+
+[rule]
+author = ["Elastic"]
+description = """
+Detects the execution of PsExec, a remote administration tool commonly abused by attackers
+to move laterally across a network by executing processes on remote systems.
+"""
+enabled = false
+false_positives = ["Legitimate administrative use of PsExec by IT staff"]
+from = "now-9m"
+index = ["logs-endpoint.events.*", "winlogbeat-*", "endgame-*"]
+language = "kuery"
+license = "Elastic License v2"
+name = "Potential Lateral Movement via PsExec"
+risk_score = 73
+rule_id = "b2c3d4e5-2222-3333-4444-bbccddee0011"
+severity = "high"
+tags = ["Domain: Endpoint", "OS: Windows", "Use Case: Threat Detection", "Tactic: Lateral Movement"]
+timestamp_override = "event.ingested"
+type = "query"
+query = '''
+process.name : ("psexec.exe" or "psexec64.exe" or "PsExec.exe") and event.type : "start"
+'''
+
+[[rule.threat]]
+framework = "MITRE ATT&CK"
+
+[rule.threat.tactic]
+id = "TA0008"
+name = "Lateral Movement"
+reference = "https://attack.mitre.org/tactics/TA0008/"
+
+[[rule.threat.technique]]
+id = "T1021"
+name = "Remote Services"
+reference = "https://attack.mitre.org/techniques/T1021/"

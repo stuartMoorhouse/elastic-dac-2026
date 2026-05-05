@@ -4,7 +4,7 @@ CLAUDE.md
 about-this-template.md
 product-requirement-prompts.md
 
-# Terraform (infra — local cluster provisioning only)
+# Terraform
 infra/.terraform/
 infra/.terraform.lock.hcl
 infra/terraform.tfstate
@@ -12,6 +12,20 @@ infra/terraform.tfstate.backup
 infra/*.tfstate.*
 infra/*.tfplan
 infra/terraform.tfvars
+terraform/scenario2/.terraform/
+terraform/scenario2/.terraform.lock.hcl
+terraform/scenario2/terraform.tfstate
+terraform/scenario2/terraform.tfstate.backup
+terraform/scenario2/*.tfstate.*
+terraform/scenario2/*.tfplan
+terraform/scenario2/terraform.tfvars
+terraform/scenario3/.terraform/
+terraform/scenario3/.terraform.lock.hcl
+terraform/scenario3/terraform.tfstate
+terraform/scenario3/terraform.tfstate.backup
+terraform/scenario3/*.tfstate.*
+terraform/scenario3/*.tfplan
+terraform/scenario3/terraform.tfvars
 
 # Shared env outputs
 shared/

@@ -10,8 +10,8 @@ bash scripts/setup.sh
 
 This single command does everything:
 1. Forks `elastic/detection-rules`, strips inherited branches and workflows, pushes DaC demo workflows
-2. Runs `terraform apply` — provisions Dev + Prod Elastic Cloud clusters, creates `terraform-dac` repo, sets branch protection, adds `detection-team-lead` as a collaborator, and stores secrets in both repos
-3. Clones both demo repos to the parent directory, ready for presentation
+2. Runs `terraform apply` — provisions Dev + Prod Elastic Cloud clusters, sets branch protection, adds `detection-team-lead` as a collaborator, and stores secrets in the `detection-rules` repo
+3. Clones the demo repo to the parent directory, ready for presentation
 
 Prerequisites: `gh` (authenticated as your main account), `git`, `terraform >= 1.8`, `EC_API_KEY` and `DETECTION_TEAM_LEAD_TOKEN` set.
 
@@ -127,7 +127,7 @@ git push origin feature/c2-beacon-detection
 
 ---
 
-## 4. Scenario 2: Terraform-native HCL
+## 2. Scenario 2: Terraform-native HCL
 
 - Open `terraform/scenario2/rules_hcl.tf`
 - The "Service Account Interactive Login" rule is a plain Terraform resource — show the exception list alongside it
@@ -142,7 +142,7 @@ git push origin feature/c2-beacon-detection
 
 ---
 
-## 5. Scenario 3: TOML + Terraform for_each
+## 3. Scenario 3: TOML + Terraform for_each
 
 - Open `terraform/scenario3/rules_toml.tf`
 - Pattern: `fileset()` discovers every `.toml` in `local-detection-rules/`, `toml::decode()` parses it, `for_each` creates one Elastic rule resource per file
@@ -180,4 +180,4 @@ export GITHUB_TOKEN=$(gh auth token)
 bash scripts/teardown.sh
 ```
 
-Runs `terraform destroy` in `infra/` (removes the `terraform-dac` repo, branch protection, secrets, collaborators, and Elastic Cloud clusters), then deletes the `detection-rules` fork.
+Runs `terraform destroy` in `infra/` (removes branch protection, secrets, collaborators, and Elastic Cloud clusters), then deletes the `detection-rules` fork.
