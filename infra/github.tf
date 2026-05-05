@@ -162,8 +162,10 @@ resource "null_resource" "detection_rules_prod_api_key" {
   provisioner "local-exec" {
     command = <<-EOT
       set -e
-      ENCODED=$(curl -sf -X POST "${ec_deployment.prod.elasticsearch.https_endpoint}/_security/api_key" \
-        -u "elastic:${ec_deployment.prod.elasticsearch_password}" \
+      ES_URL="${ec_deployment.prod.elasticsearch.https_endpoint}"
+      ES_CREDS="elastic:${ec_deployment.prod.elasticsearch_password}"
+      ENCODED=$(curl -sf -X POST "$ES_URL/_security/api_key" \
+        -u "$ES_CREDS" \
         -H "Content-Type: application/json" \
         -d '{"name":"github-actions-prod"}' \
         | python3 -c "import sys,json; print(json.load(sys.stdin)['encoded'])")
