@@ -114,10 +114,7 @@ git commit -m "feat: add C2 beacon detection for known malicious infrastructure"
 git push origin feature/c2-beacon-detection
 ```
 - CI runs "Validate Detection Rules" on push — schema + query syntax checked before any cluster is touched
-- Open a PR to `main`:
-  ```bash
-  gh pr create --base main --title "feat: C2 beacon detection for known malicious infrastructure"
-  ```
+- Once all checks pass, CI automatically opens a PR to `main`
 - Log in as `detection-team-lead`, review and approve the PR
 - Merge — CI deploys the rule to Prod Kibana automatically
 - Key point: Prod is only ever updated via an approved PR. No one can bypass this — branch protection enforces it.

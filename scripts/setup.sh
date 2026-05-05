@@ -161,6 +161,12 @@ else
   echo "Warning: $WORKFLOWS_DIR not found — skipping workflow push"
 fi
 
+# Allow GitHub Actions to create pull requests (required for auto-PR workflow)
+gh api -X PUT "repos/$GITHUB_USER/detection-rules/actions/permissions/workflow" \
+  -F default_workflow_permissions=write \
+  -F can_approve_pull_request_reviews=true
+echo "Enabled Actions PR creation permission"
+
 # Seed custom-rules/rules/ with the example TOML rule for Scenario 1
 for toml_file in "$TEMPLATES_DIR/local-detection-rules"/*.toml; do
   [ -f "$toml_file" ] || continue
