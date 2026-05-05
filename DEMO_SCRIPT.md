@@ -2,24 +2,17 @@
 
 ## Setup (before the demo)
 
-1. Fork the detection-rules repo (the only thing Terraform can't do):
-   ```bash
-   bash scripts/setup.sh
-   ```
-   This forks `elastic/detection-rules`, creates the `dev` branch, strips
-   inherited workflows, and pushes the DaC demo workflows.
+```bash
+export EC_API_KEY=<your Elastic Cloud API key>
+bash scripts/setup.sh
+```
 
-2. Provision everything else with one `terraform apply`:
-   ```bash
-   export TF_VAR_ec_api_key=<your Elastic Cloud API key>
-   export GITHUB_TOKEN=$(gh auth token)
-   cd infra/
-   terraform init
-   terraform apply
-   ```
-   This creates the `terraform-dac` repo (and pushes content), provisions
-   Dev + Prod Elastic Cloud clusters, and sets branch protection and secrets
-   in both repos automatically.
+This single command does everything:
+1. Forks `elastic/detection-rules`, creates `dev` branch, strips inherited workflows, pushes DaC demo workflows
+2. Runs `terraform apply` — provisions Dev + Prod Elastic Cloud clusters, creates `terraform-dac` repo, sets branch protection and secrets in both repos
+3. Clones both demo repos to the parent directory, ready for presentation
+
+Prerequisites: `gh` (authenticated), `git`, `terraform >= 1.8`, `EC_API_KEY` set.
 
 ---
 
