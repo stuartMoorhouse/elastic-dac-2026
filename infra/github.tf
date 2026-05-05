@@ -56,14 +56,6 @@ GITIGNORE
   }
 }
 
-resource "github_branch" "terraform_dac_dev" {
-  repository    = github_repository.terraform_dac.name
-  branch        = "dev"
-  source_branch = "main"
-
-  depends_on = [null_resource.terraform_dac_push]
-}
-
 resource "github_branch_protection" "terraform_dac_main" {
   repository_id  = github_repository.terraform_dac.node_id
   pattern        = "main"
@@ -81,32 +73,12 @@ resource "github_branch_protection" "terraform_dac_main" {
   depends_on = [null_resource.terraform_dac_push]
 }
 
-resource "github_branch_protection" "terraform_dac_dev" {
-  repository_id = github_repository.terraform_dac.node_id
-  pattern       = "dev"
+resource "github_repository_collaborator" "detection_team_lead_terraform_dac" {
+  repository = github_repository.terraform_dac.name
+  username   = var.detection_team_lead_username
+  permission = "write"
 
-  required_status_checks {
-    strict   = false
-    contexts = ["Terraform Format and Validate"]
-  }
-
-  required_pull_request_reviews {
-    required_approving_review_count = 1
-  }
-
-  depends_on = [github_branch.terraform_dac_dev]
-}
-
-resource "github_actions_secret" "terraform_dac_dev_kibana_url" {
-  repository  = github_repository.terraform_dac.name
-  secret_name = "DEV_KIBANA_URL"
-  value       = ec_deployment.dev.kibana.https_endpoint
-}
-
-resource "github_actions_secret" "terraform_dac_dev_kibana_password" {
-  repository  = github_repository.terraform_dac.name
-  secret_name = "DEV_KIBANA_PASSWORD"
-  value       = ec_deployment.dev.elasticsearch_password
+  depends_on = [null_resource.terraform_dac_push]
 }
 
 resource "github_actions_secret" "terraform_dac_prod_kibana_url" {
@@ -121,27 +93,19 @@ resource "github_actions_secret" "terraform_dac_prod_kibana_password" {
   value       = ec_deployment.prod.elasticsearch_password
 }
 
+resource "github_actions_secret" "terraform_dac_team_lead_pat" {
+  repository  = github_repository.terraform_dac.name
+  secret_name = "TEAM_LEAD_PAT"
+  value       = var.detection_team_lead_token
+}
+
 # ---------------------------------------------------------------------------
 # detection-rules fork (Repo 1) — fork created by setup.sh; Terraform
-# manages branch protection and secrets.
+# manages branch protection, collaborators, and secrets.
 # ---------------------------------------------------------------------------
 
 data "github_repository" "detection_rules" {
   full_name = "${var.github_owner}/detection-rules"
-}
-
-resource "github_branch_protection" "detection_rules_dev" {
-  repository_id = data.github_repository.detection_rules.node_id
-  pattern       = "dev"
-
-  required_status_checks {
-    strict   = false
-    contexts = ["Validate Detection Rules"]
-  }
-
-  required_pull_request_reviews {
-    required_approving_review_count = 1
-  }
 }
 
 resource "github_branch_protection" "detection_rules_main" {
@@ -159,22 +123,10 @@ resource "github_branch_protection" "detection_rules_main" {
   }
 }
 
-resource "github_actions_secret" "detection_rules_dev_kibana_url" {
-  repository  = data.github_repository.detection_rules.name
-  secret_name = "DEV_KIBANA_URL"
-  value       = ec_deployment.dev.kibana.https_endpoint
-}
-
-resource "github_actions_secret" "detection_rules_dev_kibana_username" {
-  repository  = data.github_repository.detection_rules.name
-  secret_name = "DEV_KIBANA_USERNAME"
-  value       = ec_deployment.dev.elasticsearch_username
-}
-
-resource "github_actions_secret" "detection_rules_dev_kibana_password" {
-  repository  = data.github_repository.detection_rules.name
-  secret_name = "DEV_KIBANA_PASSWORD"
-  value       = ec_deployment.dev.elasticsearch_password
+resource "github_repository_collaborator" "detection_team_lead_detection_rules" {
+  repository = data.github_repository.detection_rules.name
+  username   = var.detection_team_lead_username
+  permission = "write"
 }
 
 resource "github_actions_secret" "detection_rules_prod_kibana_url" {
@@ -193,4 +145,10 @@ resource "github_actions_secret" "detection_rules_prod_kibana_password" {
   repository  = data.github_repository.detection_rules.name
   secret_name = "PROD_KIBANA_PASSWORD"
   value       = ec_deployment.prod.elasticsearch_password
+}
+
+resource "github_actions_secret" "detection_rules_team_lead_pat" {
+  repository  = data.github_repository.detection_rules.name
+  secret_name = "TEAM_LEAD_PAT"
+  value       = var.detection_team_lead_token
 }

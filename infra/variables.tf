@@ -38,6 +38,18 @@ variable "deployment_name_prod" {
   default     = "dac-demo-prod"
 }
 
+variable "detection_team_lead_username" {
+  description = "GitHub username of the detection team lead who approves PRs"
+  type        = string
+  default     = "detection-team-lead"
+}
+
+variable "detection_team_lead_token" {
+  description = "GitHub Personal Access Token for the detection team lead account"
+  type        = string
+  sensitive   = true
+}
+
 variable "elasticsearch_size" {
   description = "Elasticsearch node size (memory)"
   type        = string

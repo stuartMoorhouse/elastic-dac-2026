@@ -4,25 +4,40 @@
 
 ```bash
 export EC_API_KEY=<your Elastic Cloud API key>
+export DETECTION_TEAM_LEAD_TOKEN=<GitHub PAT for detection-team-lead account>
 bash scripts/setup.sh
 ```
 
 This single command does everything:
-1. Forks `elastic/detection-rules`, creates `dev` branch, strips inherited workflows, pushes DaC demo workflows
-2. Runs `terraform apply` — provisions Dev + Prod Elastic Cloud clusters, creates `terraform-dac` repo, sets branch protection and secrets in both repos
+1. Forks `elastic/detection-rules`, strips inherited branches and workflows, pushes DaC demo workflows
+2. Runs `terraform apply` — provisions Dev + Prod Elastic Cloud clusters, creates `terraform-dac` repo, sets branch protection, adds `detection-team-lead` as a collaborator, and stores secrets in both repos
 3. Clones both demo repos to the parent directory, ready for presentation
 
-Prerequisites: `gh` (authenticated), `git`, `terraform >= 1.8`, `EC_API_KEY` set.
+Prerequisites: `gh` (authenticated as your main account), `git`, `terraform >= 1.8`, `EC_API_KEY` and `DETECTION_TEAM_LEAD_TOKEN` set.
 
 ---
 
-## The three repos
+## The two demo repos
 
 | Repo | Purpose | Audience-visible |
 |------|---------|-----------------|
 | `stuartMoorhouse/detection-rules` | Rules authoring, Python CLI — Scenario 1 | Yes |
-| `stuartMoorhouse/terraform-dac` | Terraform for clusters + rule deployment — Scenarios 2 & 3 | Yes |
+| `stuartMoorhouse/terraform-dac` | Terraform rule deployment — Scenarios 2 & 3 | Yes |
 | `elastic-dac-2026` (this repo) | Bootstrap, teardown, demo script — never shown | No |
+
+---
+
+## The workflow (all three scenarios)
+
+```
+feature branch  →  push  →  CI validates
+                              ↓
+                            PR to main  →  detection-team-lead approves
+                                            ↓
+                                          merge  →  CI deploys to Prod Kibana
+```
+
+Dev Elastic cluster = sandbox. Rules are authored and tested there manually. Prod is only updated via an approved PR merge to `main`.
 
 ---
 
@@ -30,26 +45,38 @@ Prerequisites: `gh` (authenticated), `git`, `terraform >= 1.8`, `EC_API_KEY` set
 
 Audience sees: `stuartMoorhouse/detection-rules`
 
+**Show what DaC looks like at rest:**
 - Open `custom-rules/rules/powershell_encoded_command.toml`
-- Point out: same TOML format Elastic's own engineers use for built-in rules
-- Fields map directly to Kibana rule editor — query, severity, MITRE ATT&CK — but stored as plain text
-- Create a feature branch and add a new rule:
+- Fields map directly to the Kibana rule editor — query, severity, MITRE ATT&CK — but stored as plain text in Git
+- Same TOML format Elastic's own engineers use for built-in rules
+
+**Author a new rule using the Dev cluster as a sandbox:**
+- Open Dev Kibana, navigate to Security > Rules, create a new rule via the UI
+- Once satisfied, export it to TOML using the CLI (install once with `pip install elastic-detection-rules`):
   ```bash
-  git checkout -b feature/detect-mimikatz
-  cp custom-rules/rules/powershell_encoded_command.toml \
-     custom-rules/rules/mimikatz_lsass_access.toml
-  # edit mimikatz_lsass_access.toml
+  python -m detection_rules kibana export-rules \
+    --kibana-url $DEV_KIBANA_URL \
+    -u elastic -p $DEV_KIBANA_PASSWORD \
+    --custom-rules-only \
+    --directory custom-rules/rules/
   ```
-- Push and open a PR targeting `dev`:
+- The exported TOML file is now under version control
+
+**Push through the pipeline:**
+```bash
+git checkout -b feature/detect-mimikatz
+git add custom-rules/rules/mimikatz_lsass_access.toml
+git commit -m "feat: add Mimikatz LSASS access detection"
+git push origin feature/detect-mimikatz
+```
+- CI runs "Validate Detection Rules" on push — schema + query syntax checked before any cluster is touched
+- Open a PR to `main`:
   ```bash
-  git add custom-rules/rules/mimikatz_lsass_access.toml
-  git commit -m "feat: add Mimikatz LSASS access detection"
-  git push origin feature/detect-mimikatz
-  gh pr create --base dev --title "feat: Mimikatz LSASS access"
+  gh pr create --base main --title "feat: Mimikatz LSASS access"
   ```
-- The "Validate Detection Rules" CI check runs automatically — shows schema + query syntax validation
-- Key point: a broken rule is caught here, before it touches any cluster
-- Once approved, merge to `dev` — CI deploys to Dev cluster automatically
+- Log in as `detection-team-lead`, review and approve the PR
+- Merge — CI deploys the rule to Prod Kibana automatically
+- Key point: Prod is only ever updated via an approved PR. No one can bypass this — branch protection enforces it.
 
 ---
 
@@ -58,10 +85,19 @@ Audience sees: `stuartMoorhouse/detection-rules`
 Audience sees: `stuartMoorhouse/terraform-dac`
 
 - Open `rules_hcl.tf`
-- The "Service Account Interactive Login" rule is a Terraform resource — show the exception list alongside it
-- `svc_sqlbackup` is approved for interactive logins: that approval is code, visible in every PR
-- Run `terraform plan -var="environment=dev"` — show the diff before anything changes
+- The "Service Account Interactive Login" rule is a plain Terraform resource — show the exception list alongside it
+- `svc_sqlbackup` is approved for interactive logins: that approval is code, visible in every PR, reviewable, auditable
+- Run a plan against the Dev cluster to show the diff before anything changes:
+  ```bash
+  cd terraform
+  terraform init
+  terraform plan -var="kibana_endpoint=$DEV_KIBANA_URL" -var="kibana_password=$DEV_KIBANA_PASSWORD"
+  ```
 - Key point: drift detection — if someone edits a rule manually in Kibana, the next `terraform apply` reverts it
+
+**Push through the pipeline:**
+- Add or modify a rule in HCL, create a feature branch, open a PR to `main`
+- `detection-team-lead` approves; merge triggers CI deploy to Prod
 
 ---
 
@@ -70,20 +106,24 @@ Audience sees: `stuartMoorhouse/terraform-dac`
 Audience sees: `stuartMoorhouse/terraform-dac`
 
 - Open `rules_toml.tf`
-- Pattern: `fileset()` discovers every `.toml` in `local-detection-rules/`, `toml::decode()` parses it, `for_each` creates one resource per file
-- Adding a new rule = create a TOML file, no Terraform edits required
+- Pattern: `fileset()` discovers every `.toml` in `local-detection-rules/`, `toml::decode()` parses it, `for_each` creates one Elastic rule resource per file
+- Adding a new rule = drop in a TOML file, no Terraform edits required
 - Best of both worlds: detection engineers write human-readable TOML; Terraform handles deployment across environments
-- Add a rule, open a PR to `dev`, show the plan diff in CI
+
+**Push through the pipeline:**
+- Add a `.toml` file, create a feature branch, open a PR to `main`
+- CI shows the `terraform plan` diff — one new rule resource
+- `detection-team-lead` approves; merge deploys to Prod
 
 ---
 
-## Reset
+## Reset (between rehearsals)
 
 ```bash
 bash scripts/reset-demo.sh
 ```
 
-Closes open PRs and deletes `feature/*`, `feat/*`, `fix/*` branches in the detection-rules fork.
+Closes open PRs and deletes `feature/*`, `feat/*`, `fix/*` branches in both repos.
 
 ---
 
@@ -94,6 +134,4 @@ export GITHUB_TOKEN=$(gh auth token)
 bash scripts/teardown.sh
 ```
 
-Runs `terraform destroy` in `infra/` (removes the `terraform-dac` repo, branch
-protection, secrets, and Elastic Cloud clusters), then deletes the
-`detection-rules` fork.
+Runs `terraform destroy` in `infra/` (removes the `terraform-dac` repo, branch protection, secrets, collaborators, and Elastic Cloud clusters), then deletes the `detection-rules` fork.

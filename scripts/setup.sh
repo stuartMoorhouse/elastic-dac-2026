@@ -48,6 +48,12 @@ if [ -z "${EC_API_KEY:-}" ]; then
   exit 1
 fi
 
+if [ -z "${DETECTION_TEAM_LEAD_TOKEN:-}" ]; then
+  echo "Error: DETECTION_TEAM_LEAD_TOKEN is not set. Export a PAT for the detection-team-lead account:" >&2
+  echo "  export DETECTION_TEAM_LEAD_TOKEN=<github-pat>" >&2
+  exit 1
+fi
+
 if [ -z "$TEMPLATES_DIR" ] || [ ! -d "$TEMPLATES_DIR" ]; then
   echo "Error: templates directory not found at $SCRIPT_DIR/../templates" >&2
   exit 1
@@ -75,9 +81,17 @@ else
   sleep 5
 fi
 
-# Delete all branches except main and dev (elastic/detection-rules has hundreds)
+# Remove any existing branch protections so direct pushes and branch deletes succeed.
+# Terraform will re-apply the correct protections during apply.
+echo "Removing existing branch protections (if any)..."
+for branch in main dev; do
+  gh api -X DELETE "repos/$GITHUB_USER/detection-rules/branches/$branch/protection" \
+    2>/dev/null && echo "  Removed protection on $branch" || true
+done
+
+# Delete all branches except main (elastic/detection-rules has hundreds)
 echo "Cleaning up inherited branches (fetching branch list, may be slow)..."
-BRANCHES=$(gh api "repos/$GITHUB_USER/detection-rules/branches" --paginate --jq '.[].name' 2>/dev/null | grep -v '^main$' | grep -v '^dev$' || true)
+BRANCHES=$(gh api "repos/$GITHUB_USER/detection-rules/branches" --paginate --jq '.[].name' 2>/dev/null | grep -v '^main$' || true)
 BRANCH_COUNT=$(echo "$BRANCHES" | grep -c . 2>/dev/null || true)
 if [ "${BRANCH_COUNT:-0}" -gt 0 ]; then
   echo "  Found $BRANCH_COUNT branches to delete (this may take a minute)..."
@@ -93,14 +107,6 @@ else
   echo "  No inherited branches to clean up"
 fi
 echo "Branch cleanup complete"
-
-# Create dev branch
-echo "Creating dev branch..."
-MAIN_SHA=$(gh api "repos/$GITHUB_USER/detection-rules/git/refs/heads/main" --jq '.object.sha')
-gh api -X POST "repos/$GITHUB_USER/detection-rules/git/refs" \
-  -f ref="refs/heads/dev" \
-  -f sha="$MAIN_SHA" 2>/dev/null || echo "dev branch already exists"
-echo "Created dev branch"
 
 # Minimal fork settings
 gh api -X PATCH "repos/$GITHUB_USER/detection-rules" \
@@ -155,12 +161,26 @@ else
   echo "Warning: $WORKFLOWS_DIR not found — skipping workflow push"
 fi
 
-# Create custom-rules/rules/ directory
-gh api -X PUT "repos/$GITHUB_USER/detection-rules/contents/custom-rules/rules/.gitkeep" \
-  -f message="Add custom-rules directory" \
-  -f content="$(printf '' | base64)" \
-  --silent 2>/dev/null || true
-echo "Created custom-rules/rules/ directory"
+# Seed custom-rules/rules/ with the example TOML rule for Scenario 1
+for toml_file in "$TEMPLATES_DIR/local-detection-rules"/*.toml; do
+  [ -f "$toml_file" ] || continue
+  toml_name=$(basename "$toml_file")
+  toml_content=$(base64 < "$toml_file")
+  EXISTING_SHA=$(gh api "repos/$GITHUB_USER/detection-rules/contents/custom-rules/rules/$toml_name" --jq '.sha' 2>/dev/null || true)
+  if [ -n "$EXISTING_SHA" ]; then
+    gh api -X PUT "repos/$GITHUB_USER/detection-rules/contents/custom-rules/rules/$toml_name" \
+      -f message="Add example rule: $toml_name" \
+      -f content="$toml_content" \
+      -f sha="$EXISTING_SHA" \
+      --silent
+  else
+    gh api -X PUT "repos/$GITHUB_USER/detection-rules/contents/custom-rules/rules/$toml_name" \
+      -f message="Add example rule: $toml_name" \
+      -f content="$toml_content" \
+      --silent
+  fi
+  echo "Pushed example rule: $toml_name"
+done
 
 # ---------------------------------------------------------------------------
 # Provision infrastructure (clusters, repos, secrets, branch protection)
@@ -171,6 +191,7 @@ echo "=== Running terraform apply ==="
 
 INFRA_DIR="$SCRIPT_DIR/../infra"
 export TF_VAR_ec_api_key="$EC_API_KEY"
+export TF_VAR_detection_team_lead_token="$DETECTION_TEAM_LEAD_TOKEN"
 export GITHUB_TOKEN="$(gh auth token)"
 
 terraform -chdir="$INFRA_DIR" init -upgrade -input=false -no-color 2>&1 | tail -5

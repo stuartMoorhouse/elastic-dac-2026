@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="stuartMoorhouse/detection-rules"
+GITHUB_USER=$(gh api user --jq '.login')
 
-echo "Resetting detection-rules fork to clean demo state..."
+reset_repo() {
+  local repo="$GITHUB_USER/$1"
+  echo "=== Resetting $repo ==="
 
-# Close open PRs
-gh pr list --repo "$REPO" --state open --json number --jq '.[].number' | while read -r pr; do
-  gh pr close "$pr" --repo "$REPO" --comment "Closed by reset-demo script"
-  echo "Closed PR #$pr"
-done
-
-# Delete feature/fix branches
-gh api "repos/$REPO/branches" --paginate --jq '.[].name' \
-  | grep -E '^(feature|feat|fix)/' \
-  | while read -r branch; do
-    gh api -X DELETE "repos/$REPO/git/refs/heads/$branch" 2>/dev/null || true
-    echo "Deleted branch: $branch"
+  gh pr list --repo "$repo" --state open --json number --jq '.[].number' | while read -r pr; do
+    gh pr close "$pr" --repo "$repo" --comment "Closed by reset-demo script"
+    echo "  Closed PR #$pr"
   done
 
+  gh api "repos/$repo/branches" --paginate --jq '.[].name' \
+    | grep -E '^(feature|feat|fix)/' \
+    | while read -r branch; do
+        gh api -X DELETE "repos/$repo/git/refs/heads/$branch" 2>/dev/null || true
+        echo "  Deleted branch: $branch"
+      done
+
+  echo "  Done"
+}
+
+reset_repo "detection-rules"
+reset_repo "terraform-dac"
+
+echo ""
 echo "Reset complete."

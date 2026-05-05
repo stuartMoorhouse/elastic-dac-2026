@@ -3,7 +3,7 @@ on:
   push:
     branches: ['feature/**', 'feat/**', 'fix/**']
   pull_request:
-    branches: [dev, main]
+    branches: [main]
 jobs:
   secrets-scan:
     name: Secrets Scan
