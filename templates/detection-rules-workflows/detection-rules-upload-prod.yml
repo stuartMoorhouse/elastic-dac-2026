@@ -41,10 +41,9 @@ jobs:
           pip install lib/kql lib/kibana
       - name: Upload rules to Prod Kibana
         run: |
-          for f in custom-rules/rules/*.toml; do
-            [ -f "$f" ] || continue
-            python -m detection_rules kibana upload-rule "$f" \
-              --kibana-url "${{ secrets.PROD_KIBANA_URL }}" \
-              -u "${{ secrets.PROD_KIBANA_USERNAME }}" \
-              -p "${{ secrets.PROD_KIBANA_PASSWORD }}"
-          done
+          python -m detection_rules kibana \
+            --kibana-url "${{ secrets.PROD_KIBANA_URL }}" \
+            --api-key "${{ secrets.PROD_KIBANA_API_KEY }}" \
+            import-rules \
+            --overwrite \
+            $(find custom-rules/rules -name "*.toml" | sort | tr '\n' ' ')

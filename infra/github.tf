@@ -152,3 +152,24 @@ resource "github_actions_secret" "detection_rules_team_lead_pat" {
   secret_name = "TEAM_LEAD_PAT"
   value       = var.detection_team_lead_token
 }
+
+resource "null_resource" "detection_rules_prod_api_key" {
+  triggers = {
+    prod_deployment_id = ec_deployment.prod.id
+    es_url             = ec_deployment.prod.elasticsearch.https_endpoint
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      ENCODED=$(curl -sf -X POST "${ec_deployment.prod.elasticsearch.https_endpoint}/_security/api_key" \
+        -u "elastic:${ec_deployment.prod.elasticsearch_password}" \
+        -H "Content-Type: application/json" \
+        -d '{"name":"github-actions-prod"}' \
+        | python3 -c "import sys,json; print(json.load(sys.stdin)['encoded'])")
+      gh secret set PROD_KIBANA_API_KEY \
+        --repo "${data.github_repository.detection_rules.full_name}" \
+        --body "$ENCODED"
+    EOT
+  }
+}
