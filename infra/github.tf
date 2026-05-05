@@ -27,7 +27,8 @@ resource "null_resource" "terraform_dac_push" {
       set -e
       WORK=$(mktemp -d)
       trap 'rm -rf "$WORK"' EXIT
-      cp -r "${path.module}/../terraform-dac/." "$WORK/"
+      cp -r "${path.module}/../templates/." "$WORK/"
+      rm -rf "$WORK/detection-rules-workflows"
       cd "$WORK"
       cat > .gitignore << 'GITIGNORE'
 .gitignore
@@ -97,27 +98,27 @@ resource "github_branch_protection" "terraform_dac_dev" {
 }
 
 resource "github_actions_secret" "terraform_dac_dev_kibana_url" {
-  repository      = github_repository.terraform_dac.name
-  secret_name     = "DEV_KIBANA_URL"
-  value = ec_deployment.dev.kibana.https_endpoint
+  repository  = github_repository.terraform_dac.name
+  secret_name = "DEV_KIBANA_URL"
+  value       = ec_deployment.dev.kibana.https_endpoint
 }
 
 resource "github_actions_secret" "terraform_dac_dev_kibana_password" {
-  repository      = github_repository.terraform_dac.name
-  secret_name     = "DEV_KIBANA_PASSWORD"
-  value = ec_deployment.dev.elasticsearch_password
+  repository  = github_repository.terraform_dac.name
+  secret_name = "DEV_KIBANA_PASSWORD"
+  value       = ec_deployment.dev.elasticsearch_password
 }
 
 resource "github_actions_secret" "terraform_dac_prod_kibana_url" {
-  repository      = github_repository.terraform_dac.name
-  secret_name     = "PROD_KIBANA_URL"
-  value = ec_deployment.prod.kibana.https_endpoint
+  repository  = github_repository.terraform_dac.name
+  secret_name = "PROD_KIBANA_URL"
+  value       = ec_deployment.prod.kibana.https_endpoint
 }
 
 resource "github_actions_secret" "terraform_dac_prod_kibana_password" {
-  repository      = github_repository.terraform_dac.name
-  secret_name     = "PROD_KIBANA_PASSWORD"
-  value = ec_deployment.prod.elasticsearch_password
+  repository  = github_repository.terraform_dac.name
+  secret_name = "PROD_KIBANA_PASSWORD"
+  value       = ec_deployment.prod.elasticsearch_password
 }
 
 # ---------------------------------------------------------------------------
@@ -159,37 +160,37 @@ resource "github_branch_protection" "detection_rules_main" {
 }
 
 resource "github_actions_secret" "detection_rules_dev_kibana_url" {
-  repository      = data.github_repository.detection_rules.name
-  secret_name     = "DEV_KIBANA_URL"
-  value = ec_deployment.dev.kibana.https_endpoint
+  repository  = data.github_repository.detection_rules.name
+  secret_name = "DEV_KIBANA_URL"
+  value       = ec_deployment.dev.kibana.https_endpoint
 }
 
 resource "github_actions_secret" "detection_rules_dev_kibana_username" {
-  repository      = data.github_repository.detection_rules.name
-  secret_name     = "DEV_KIBANA_USERNAME"
-  value = ec_deployment.dev.elasticsearch_username
+  repository  = data.github_repository.detection_rules.name
+  secret_name = "DEV_KIBANA_USERNAME"
+  value       = ec_deployment.dev.elasticsearch_username
 }
 
 resource "github_actions_secret" "detection_rules_dev_kibana_password" {
-  repository      = data.github_repository.detection_rules.name
-  secret_name     = "DEV_KIBANA_PASSWORD"
-  value = ec_deployment.dev.elasticsearch_password
+  repository  = data.github_repository.detection_rules.name
+  secret_name = "DEV_KIBANA_PASSWORD"
+  value       = ec_deployment.dev.elasticsearch_password
 }
 
 resource "github_actions_secret" "detection_rules_prod_kibana_url" {
-  repository      = data.github_repository.detection_rules.name
-  secret_name     = "PROD_KIBANA_URL"
-  value = ec_deployment.prod.kibana.https_endpoint
+  repository  = data.github_repository.detection_rules.name
+  secret_name = "PROD_KIBANA_URL"
+  value       = ec_deployment.prod.kibana.https_endpoint
 }
 
 resource "github_actions_secret" "detection_rules_prod_kibana_username" {
-  repository      = data.github_repository.detection_rules.name
-  secret_name     = "PROD_KIBANA_USERNAME"
-  value = ec_deployment.prod.elasticsearch_username
+  repository  = data.github_repository.detection_rules.name
+  secret_name = "PROD_KIBANA_USERNAME"
+  value       = ec_deployment.prod.elasticsearch_username
 }
 
 resource "github_actions_secret" "detection_rules_prod_kibana_password" {
-  repository      = data.github_repository.detection_rules.name
-  secret_name     = "PROD_KIBANA_PASSWORD"
-  value = ec_deployment.prod.elasticsearch_password
+  repository  = data.github_repository.detection_rules.name
+  secret_name = "PROD_KIBANA_PASSWORD"
+  value       = ec_deployment.prod.elasticsearch_password
 }

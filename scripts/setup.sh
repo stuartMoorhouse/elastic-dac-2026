@@ -13,7 +13,7 @@ set -euo pipefail
 # Usage: bash scripts/setup.sh
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TERRAFORM_DAC_DIR="$(cd "$SCRIPT_DIR/../terraform-dac" 2>/dev/null && pwd)" || true
+TEMPLATES_DIR="$(cd "$SCRIPT_DIR/../templates" 2>/dev/null && pwd)" || true
 
 # ---------------------------------------------------------------------------
 # Prerequisites
@@ -48,8 +48,8 @@ if [ -z "${EC_API_KEY:-}" ]; then
   exit 1
 fi
 
-if [ -z "$TERRAFORM_DAC_DIR" ] || [ ! -d "$TERRAFORM_DAC_DIR" ]; then
-  echo "Error: terraform-dac directory not found at $SCRIPT_DIR/../terraform-dac" >&2
+if [ -z "$TEMPLATES_DIR" ] || [ ! -d "$TEMPLATES_DIR" ]; then
+  echo "Error: templates directory not found at $SCRIPT_DIR/../templates" >&2
   exit 1
 fi
 
@@ -67,14 +67,17 @@ echo ""
 
 echo "=== Forking elastic/detection-rules ==="
 
-gh repo fork elastic/detection-rules --clone=false 2>/dev/null || true
+if gh api "repos/$GITHUB_USER/detection-rules" &>/dev/null; then
+  echo "Fork already exists — skipping"
+else
+  gh repo fork elastic/detection-rules --clone=false
+  echo "Waiting for fork to be ready..."
+  sleep 5
+fi
 
-echo "Waiting for fork to be ready..."
-sleep 5
-
-# Delete all branches except main (elastic/detection-rules has hundreds)
+# Delete all branches except main and dev (elastic/detection-rules has hundreds)
 echo "Cleaning up inherited branches..."
-BRANCHES=$(gh api "repos/$GITHUB_USER/detection-rules/branches" --paginate --jq '.[].name' 2>/dev/null | grep -v '^main$' || true)
+BRANCHES=$(gh api "repos/$GITHUB_USER/detection-rules/branches" --paginate --jq '.[].name' 2>/dev/null | grep -v '^main$' | grep -v '^dev$' || true)
 for branch in $BRANCHES; do
   gh api -X DELETE "repos/$GITHUB_USER/detection-rules/git/refs/heads/$branch" 2>/dev/null || true
 done
@@ -96,10 +99,14 @@ gh api -X PATCH "repos/$GITHUB_USER/detection-rules" \
   --silent
 echo "Configured fork settings"
 
-# Remove inherited upstream workflows
+# Remove inherited upstream workflows (skip our own DaC demo workflows)
 echo "Removing inherited workflows..."
+OUR_WORKFLOWS=$(ls "$TEMPLATES_DIR/detection-rules-workflows"/*.yml 2>/dev/null | xargs -I{} basename {} | sort | tr '\n' ' ')
 WORKFLOW_FILES=$(gh api "repos/$GITHUB_USER/detection-rules/contents/.github/workflows" --jq '.[].name' 2>/dev/null || true)
 for wf in $WORKFLOW_FILES; do
+  if echo " $OUR_WORKFLOWS " | grep -q " $wf "; then
+    continue
+  fi
   SHA=$(gh api "repos/$GITHUB_USER/detection-rules/contents/.github/workflows/$wf" --jq '.sha' 2>/dev/null || true)
   if [ -n "$SHA" ]; then
     gh api -X DELETE "repos/$GITHUB_USER/detection-rules/contents/.github/workflows/$wf" \
@@ -111,7 +118,7 @@ done
 echo "Inherited workflows removed"
 
 # Push DaC demo workflows
-WORKFLOWS_DIR="$TERRAFORM_DAC_DIR/detection-rules-workflows"
+WORKFLOWS_DIR="$TEMPLATES_DIR/detection-rules-workflows"
 if [ -d "$WORKFLOWS_DIR" ]; then
   for wf_file in "$WORKFLOWS_DIR"/*.yml; do
     [ -f "$wf_file" ] || continue
