@@ -13,7 +13,7 @@ set -euo pipefail
 # Usage: bash scripts/setup.sh
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TEMPLATES_DIR="$(cd "$SCRIPT_DIR/../templates" 2>/dev/null && pwd)" || true
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # ---------------------------------------------------------------------------
 # Prerequisites
@@ -54,8 +54,8 @@ if [ -z "${DETECTION_TEAM_LEAD_TOKEN:-}" ]; then
   exit 1
 fi
 
-if [ -z "$TEMPLATES_DIR" ] || [ ! -d "$TEMPLATES_DIR" ]; then
-  echo "Error: templates directory not found at $SCRIPT_DIR/../templates" >&2
+if [ ! -d "$REPO_DIR/terraform" ]; then
+  echo "Error: terraform directory not found at $REPO_DIR/terraform" >&2
   exit 1
 fi
 
@@ -118,7 +118,7 @@ echo "Configured fork settings"
 
 # Remove inherited upstream workflows (skip our own DaC demo workflows)
 echo "Removing inherited workflows..."
-OUR_WORKFLOWS=$(ls "$TEMPLATES_DIR/detection-rules-workflows"/*.yml 2>/dev/null | xargs -I{} basename {} | sort | tr '\n' ' ')
+OUR_WORKFLOWS=$(ls "$REPO_DIR/detection-rules-workflows"/*.yml 2>/dev/null | xargs -I{} basename {} | sort | tr '\n' ' ')
 WORKFLOW_FILES=$(gh api "repos/$GITHUB_USER/detection-rules/contents/.github/workflows" --jq '.[].name' 2>/dev/null || true)
 for wf in $WORKFLOW_FILES; do
   if echo " $OUR_WORKFLOWS " | grep -q " $wf "; then
@@ -136,7 +136,7 @@ done
 echo "Inherited workflows removed"
 
 # Push DaC demo workflows
-WORKFLOWS_DIR="$TEMPLATES_DIR/detection-rules-workflows"
+WORKFLOWS_DIR="$REPO_DIR/detection-rules-workflows"
 if [ -d "$WORKFLOWS_DIR" ]; then
   for wf_file in "$WORKFLOWS_DIR"/*.yml; do
     [ -f "$wf_file" ] || continue
@@ -258,15 +258,15 @@ echo "Written .detection-rules-cfg.json (Dev cluster, API key auth)"
 
 # Write tfvars so the presenter can run terraform apply without extra flags.
 # terraform.tfvars is gitignored — credentials stay local.
-cat > "$SCRIPT_DIR/../templates/terraform/scenario2/terraform.tfvars" <<EOF
+cat > "$REPO_DIR/terraform/scenario2/terraform.tfvars" <<EOF
 kibana_endpoint = "$DEV_KB_URL"
 kibana_password = "$DEV_ES_PASS"
 EOF
-cat > "$SCRIPT_DIR/../templates/terraform/scenario3/terraform.tfvars" <<EOF
+cat > "$REPO_DIR/terraform/scenario3/terraform.tfvars" <<EOF
 kibana_endpoint = "$DEV_KB_URL"
 kibana_password = "$DEV_ES_PASS"
 EOF
-echo "Written terraform.tfvars to templates/terraform/scenario2/ and scenario3/ (Dev cluster credentials)"
+echo "Written terraform.tfvars to terraform/scenario2/ and scenario3/ (Dev cluster credentials)"
 
 # ---------------------------------------------------------------------------
 # Done
@@ -277,7 +277,7 @@ echo "=== Setup complete ==="
 echo ""
 echo "Demo repos:"
 echo "  $DEMO_DIR/detection-rules          (Scenario 1: Python CLI)"
-echo "  $SCRIPT_DIR/../templates/terraform (Scenarios 2 & 3: Terraform)"
+echo "  $REPO_DIR/terraform (Scenarios 2 & 3: Terraform)"
 echo ""
 echo "To reset demo state between runs:"
 echo "  bash $SCRIPT_DIR/reset-demo.sh"

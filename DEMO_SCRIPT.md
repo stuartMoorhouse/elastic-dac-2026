@@ -39,7 +39,7 @@ source env/bin/activate
 
 ### Terraform environment
 ```bash
-cd templates/terraform/scenario2 && terraform init
+cd terraform/scenario2 && terraform init
 cd ../scenario3 && terraform init
 ```
 
@@ -50,7 +50,7 @@ cd ../scenario3 && terraform init
 | Repo | Purpose | Audience-visible |
 |------|---------|-----------------|
 | `stuartMoorhouse/detection-rules` | Rules authoring, Python CLI — Scenario 1 | Yes |
-| `elastic-dac-2026/templates/terraform` | Terraform files shown locally — Scenarios 2 & 3 | No |
+| `elastic-dac-2026/terraform` | Terraform files shown locally — Scenarios 2 & 3 | No |
 | `elastic-dac-2026` (this repo) | Bootstrap, teardown, demo script — never shown | No |
 
 ---
@@ -129,12 +129,12 @@ git push origin feature/c2-beacon-detection
 
 ## 4. Scenario 2: Terraform-native HCL
 
-- Open `templates/terraform/scenario2/rules_hcl.tf`
+- Open `terraform/scenario2/rules_hcl.tf`
 - The "Service Account Interactive Login" rule is a plain Terraform resource — show the exception list alongside it
 - `svc_sqlbackup` is approved for interactive logins: that approval is code, visible in every PR, reviewable, auditable
 - Run a plan against the Dev cluster to show the diff before anything changes:
   ```bash
-  cd templates/terraform/scenario2
+  cd terraform/scenario2
   terraform plan
   ```
 - Key point: drift detection — if someone edits a rule manually in Kibana, the next `terraform apply` reverts it
@@ -144,13 +144,13 @@ git push origin feature/c2-beacon-detection
 
 ## 5. Scenario 3: TOML + Terraform for_each
 
-- Open `templates/terraform/scenario3/rules_toml.tf`
-- Pattern: `fileset()` discovers every `.toml` in `templates/local-detection-rules/`, `toml::decode()` parses it, `for_each` creates one Elastic rule resource per file
+- Open `terraform/scenario3/rules_toml.tf`
+- Pattern: `fileset()` discovers every `.toml` in `local-detection-rules/`, `toml::decode()` parses it, `for_each` creates one Elastic rule resource per file
 - Adding a new rule = drop in a TOML file, no Terraform edits required
 - Best of both worlds: detection engineers write human-readable TOML; Terraform handles deployment across environments
 
 **Show what DaC looks like at rest:**
-- Open `templates/local-detection-rules/` — three rules are already present:
+- Open `local-detection-rules/` — three rules are already present:
   - `powershell_encoded_command.toml` — Suspicious PowerShell Encoded Command Execution
   - `lateral_movement_psexec.toml` — Potential Lateral Movement via PsExec
   - `c2_beacon_dns.toml` — Potential C2 Beacon via High-Frequency DNS
@@ -158,8 +158,8 @@ git push origin feature/c2-beacon-detection
 - Same TOML format Elastic's own engineers use for built-in rules
 
 **Show the apply:**
-- Add a `.toml` file to `templates/local-detection-rules/`
-- Run `terraform apply` from `templates/terraform/scenario3/` — one new rule resource appears
+- Add a `.toml` file to `local-detection-rules/`
+- Run `terraform apply` from `terraform/scenario3/` — one new rule resource appears
 
 ---
 
