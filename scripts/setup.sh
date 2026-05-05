@@ -263,6 +263,14 @@ else
   echo "terraform-dac already exists at $DEMO_DIR/terraform-dac — skipping clone"
 fi
 
+# Write tfvars so the presenter can run terraform apply without extra flags.
+# terraform.tfvars is gitignored in the cloned repo — credentials stay local.
+cat > "$DEMO_DIR/terraform-dac/terraform/terraform.tfvars" <<EOF
+kibana_endpoint = "$DEV_KB_URL"
+kibana_password = "$DEV_ES_PASS"
+EOF
+echo "Written terraform.tfvars to terraform-dac/terraform/ (Dev cluster credentials)"
+
 # ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------

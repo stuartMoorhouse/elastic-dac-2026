@@ -137,10 +137,7 @@ cd ../terraform-dac/terraform
   terraform plan -var="kibana_endpoint=$DEV_KIBANA_URL" -var="kibana_password=$DEV_KIBANA_PASSWORD"
   ```
 - Key point: drift detection — if someone edits a rule manually in Kibana, the next `terraform apply` reverts it
-
-**Push through the pipeline:**
-- Add or modify a rule in HCL, create a feature branch, open a PR to `main`
-- `detection-team-lead` approves; merge triggers CI deploy to Prod
+- Key point: parameterized rules (to do)
 
 ---
 
