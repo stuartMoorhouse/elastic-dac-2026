@@ -256,20 +256,17 @@ cat > "$DEMO_DIR/detection-rules/.detection-rules-cfg.json" <<EOF
 EOF
 echo "Written .detection-rules-cfg.json (Dev cluster, API key auth)"
 
-if [ ! -d "$DEMO_DIR/terraform-dac" ]; then
-  gh repo clone "$GITHUB_USER/terraform-dac" "$DEMO_DIR/terraform-dac"
-  echo "Cloned terraform-dac to $DEMO_DIR/terraform-dac"
-else
-  echo "terraform-dac already exists at $DEMO_DIR/terraform-dac — skipping clone"
-fi
-
 # Write tfvars so the presenter can run terraform apply without extra flags.
-# terraform.tfvars is gitignored in the cloned repo — credentials stay local.
-cat > "$DEMO_DIR/terraform-dac/terraform/terraform.tfvars" <<EOF
+# terraform.tfvars is gitignored — credentials stay local.
+cat > "$SCRIPT_DIR/../templates/terraform/scenario2/terraform.tfvars" <<EOF
 kibana_endpoint = "$DEV_KB_URL"
 kibana_password = "$DEV_ES_PASS"
 EOF
-echo "Written terraform.tfvars to terraform-dac/terraform/ (Dev cluster credentials)"
+cat > "$SCRIPT_DIR/../templates/terraform/scenario3/terraform.tfvars" <<EOF
+kibana_endpoint = "$DEV_KB_URL"
+kibana_password = "$DEV_ES_PASS"
+EOF
+echo "Written terraform.tfvars to templates/terraform/scenario2/ and scenario3/ (Dev cluster credentials)"
 
 # ---------------------------------------------------------------------------
 # Done
@@ -279,8 +276,8 @@ echo ""
 echo "=== Setup complete ==="
 echo ""
 echo "Demo repos:"
-echo "  $DEMO_DIR/detection-rules   (Scenario 1: Python CLI)"
-echo "  $DEMO_DIR/terraform-dac     (Scenarios 2 & 3: Terraform)"
+echo "  $DEMO_DIR/detection-rules          (Scenario 1: Python CLI)"
+echo "  $SCRIPT_DIR/../templates/terraform (Scenarios 2 & 3: Terraform)"
 echo ""
 echo "To reset demo state between runs:"
 echo "  bash $SCRIPT_DIR/reset-demo.sh"

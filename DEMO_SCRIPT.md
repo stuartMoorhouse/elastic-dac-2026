@@ -38,22 +38,24 @@ source env/bin/activate
 ```
 
 ### Terraform environment
-cd ../terraform-dac/terraform
-terraform init
+```bash
+cd templates/terraform/scenario2 && terraform init
+cd ../scenario3 && terraform init
+```
 
 ---
 
-## The two demo repos
+## The demo repos
 
 | Repo | Purpose | Audience-visible |
 |------|---------|-----------------|
 | `stuartMoorhouse/detection-rules` | Rules authoring, Python CLI — Scenario 1 | Yes |
-| `stuartMoorhouse/terraform-dac` | Terraform rule deployment — Scenarios 2 & 3 | Yes |
+| `elastic-dac-2026/templates/terraform` | Terraform files shown locally — Scenarios 2 & 3 | No |
 | `elastic-dac-2026` (this repo) | Bootstrap, teardown, demo script — never shown | No |
 
 ---
 
-## The workflow (all three scenarios)
+## The workflow (Scenario 1)
 
 ```
 feature branch  →  push  →  CI validates
@@ -64,6 +66,8 @@ feature branch  →  push  →  CI validates
 ```
 
 Dev Elastic cluster = sandbox. Rules are authored and tested there manually. Prod is only updated via an approved PR merge to `main`.
+
+Scenarios 2 & 3 demonstrate the Terraform approach locally — `terraform plan` and `terraform apply` run directly against the Dev cluster.
 
 ---
 
@@ -123,45 +127,39 @@ git push origin feature/c2-beacon-detection
 
 ---
 
-## 4. Scenario 2: Terraform-native HCL (Repo 2)
-cd ../terraform-dac/terraform
+## 4. Scenario 2: Terraform-native HCL
 
-
-- Open `rules_hcl.tf`
+- Open `templates/terraform/scenario2/rules_hcl.tf`
 - The "Service Account Interactive Login" rule is a plain Terraform resource — show the exception list alongside it
 - `svc_sqlbackup` is approved for interactive logins: that approval is code, visible in every PR, reviewable, auditable
 - Run a plan against the Dev cluster to show the diff before anything changes:
   ```bash
-  cd terraform
-  terraform init
-  terraform plan -var="kibana_endpoint=$DEV_KIBANA_URL" -var="kibana_password=$DEV_KIBANA_PASSWORD"
+  cd templates/terraform/scenario2
+  terraform plan
   ```
 - Key point: drift detection — if someone edits a rule manually in Kibana, the next `terraform apply` reverts it
 - Key point: parameterized rules (to do)
 
 ---
 
-## 5. Scenario 3: TOML + Terraform for_each (Repo 2)
+## 5. Scenario 3: TOML + Terraform for_each
 
-Audience sees: `stuartMoorhouse/terraform-dac`
-
-- Open `rules_toml.tf`
-- Pattern: `fileset()` discovers every `.toml` in `local-detection-rules/`, `toml::decode()` parses it, `for_each` creates one Elastic rule resource per file
+- Open `templates/terraform/scenario3/rules_toml.tf`
+- Pattern: `fileset()` discovers every `.toml` in `templates/local-detection-rules/`, `toml::decode()` parses it, `for_each` creates one Elastic rule resource per file
 - Adding a new rule = drop in a TOML file, no Terraform edits required
 - Best of both worlds: detection engineers write human-readable TOML; Terraform handles deployment across environments
 
 **Show what DaC looks like at rest:**
-- Open `local-detection-rules/` — three rules are already present:
+- Open `templates/local-detection-rules/` — three rules are already present:
   - `powershell_encoded_command.toml` — Suspicious PowerShell Encoded Command Execution
   - `lateral_movement_psexec.toml` — Potential Lateral Movement via PsExec
   - `c2_beacon_dns.toml` — Potential C2 Beacon via High-Frequency DNS
 - Fields map directly to the Kibana rule editor — query, severity, MITRE ATT&CK — but stored as plain text in Git
 - Same TOML format Elastic's own engineers use for built-in rules
 
-**Push through the pipeline:**
-- Add a `.toml` file, create a feature branch, open a PR to `main`
-- CI shows the `terraform plan` diff — one new rule resource
-- `detection-team-lead` approves; merge deploys to Prod
+**Show the apply:**
+- Add a `.toml` file to `templates/local-detection-rules/`
+- Run `terraform apply` from `templates/terraform/scenario3/` — one new rule resource appears
 
 ---
 

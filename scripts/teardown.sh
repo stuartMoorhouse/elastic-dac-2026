@@ -4,8 +4,8 @@ set -euo pipefail
 GITHUB_USER=$(gh api user --jq '.login')
 
 echo "This will:"
-echo "  1. Run terraform destroy in infra/ — deletes terraform-dac repo,"
-echo "     branch protection, secrets, and Elastic Cloud clusters"
+echo "  1. Run terraform destroy in infra/ — deletes branch protection,"
+echo "     secrets, and Elastic Cloud clusters"
 echo "  2. Delete the $GITHUB_USER/detection-rules fork"
 echo ""
 read -r -p "Proceed with teardown? (yes/no): " answer
@@ -28,9 +28,6 @@ if [ -f "$INFRA_DIR/terraform.tfstate" ]; then
   terraform -chdir="$INFRA_DIR" destroy -auto-approve
 else
   echo "No terraform state found in infra/ — skipping terraform destroy."
-  echo "Deleting terraform-dac repo via gh CLI..."
-  gh repo delete "$GITHUB_USER/terraform-dac" --yes 2>/dev/null \
-    || echo "terraform-dac not found, skipping"
 fi
 
 echo ""

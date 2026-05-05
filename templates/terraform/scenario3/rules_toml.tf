@@ -1,5 +1,5 @@
 locals {
-  rule_files = fileset(path.module, "../local-detection-rules/*.toml")
+  rule_files = fileset(path.module, "../../local-detection-rules/*.toml")
 
   raw_decoded = {
     for f in local.rule_files :
