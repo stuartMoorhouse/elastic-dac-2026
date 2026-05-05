@@ -52,16 +52,31 @@ reset_repo() {
   done
 
   branches=$(gh api "repos/$repo/branches" --paginate --jq '.[].name' \
-    | grep -E '^(feature|feat|fix)/' || true)
+    | grep -E '^(feature|feat|fix|chore)/' || true)
   for branch in $branches; do
     gh api -X DELETE "repos/$repo/git/refs/heads/$branch" 2>/dev/null || true
-    echo "  Deleted branch: $branch"
+    echo "  Deleted remote branch: $branch"
   done
 
   echo "  Done"
 }
 
 reset_repo "detection-rules"
+
+# Clean up local branches in the detection-rules clone
+CLONE_DIR="$REPO_DIR/../detection-rules"
+if [[ -d "$CLONE_DIR/.git" ]]; then
+  echo ""
+  echo "=== Cleaning local detection-rules clone ==="
+  git -C "$CLONE_DIR" checkout main --quiet
+  local_branches=$(git -C "$CLONE_DIR" branch --format='%(refname:short)' \
+    | grep -E '^(feature|feat|fix|chore)/' || true)
+  for branch in $local_branches; do
+    git -C "$CLONE_DIR" branch -D "$branch"
+    echo "  Deleted local branch: $branch"
+  done
+  echo "  Done"
+fi
 
 # ---------------------------------------------------------------------------
 # Delete custom rules from Dev and Prod Kibana clusters
