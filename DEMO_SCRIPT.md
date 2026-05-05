@@ -115,8 +115,11 @@ git push origin feature/c2-beacon-detection
 ```
 - CI runs "Validate Detection Rules" on push — schema + query syntax checked before any cluster is touched
 - Once all checks pass, CI automatically opens a PR to `main`
-- Log in as `detection-team-lead`, review and approve the PR
-- Merge — CI deploys the rule to Prod Kibana automatically
+- In a private/incognito browser window, log in to GitHub as `detection-team-lead` and open the PR
+- Click the **Files changed** tab → a review panel appears on the right
+- Select **Approve**, then click **Submit review**
+- Back in your main browser as `stuartMoorhouse`, the Merge button is now unblocked — click **Merge pull request**
+- CI deploys the rule to Prod Kibana automatically
 - Key point: Prod is only ever updated via an approved PR. No one can bypass this — branch protection enforces it.
 
 ---
