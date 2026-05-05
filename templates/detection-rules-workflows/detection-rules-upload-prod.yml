@@ -46,4 +46,4 @@ jobs:
             --api-key "${{ secrets.PROD_KIBANA_API_KEY }}" \
             import-rules \
             --overwrite \
-            $(find custom-rules/rules -name "*.toml" | sort | tr '\n' ' ')
+            --directory custom-rules/rules
