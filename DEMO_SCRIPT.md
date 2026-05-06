@@ -72,9 +72,6 @@ Scenarios 2 & 3 demonstrate the Terraform approach locally — `terraform plan` 
 ---
 
 ## Scenario 1: Python CLI (Repo 1)
-
-Audience sees: `stuartMoorhouse/detection-rules`
-
 **1. Author a new rule using the Dev cluster as a sandbox:**
 
 Create a feature branch first (in the `../detection-rules` directory):
@@ -99,7 +96,7 @@ Setup has already loaded test data into Dev — 8 malicious C2 beacon events (ou
 - Fill in rule details:
   - Name: `Outbound C2 Beacon to Known Malicious Infrastructure`
   - Severity: High / Risk score: 73
-  - MITRE: TA0011 Command and Control → T1071.001 Web Protocols
+  - MITRE: TA0011 Command and Control  → T1071 Application Layer Protocols → T1071.001 Web Protocols
 - Save the rule
 
 Export to TOML (with the venv active — credentials come from `.detection-rules-cfg.json` written by setup.sh):
@@ -129,13 +126,17 @@ git push origin feature/c2-beacon-detection
 
 ## 2. Scenario 2: Terraform-native HCL
 
+```bash
+cd terraform/scenario2
+```
+
 - Open `terraform/scenario2/rules_hcl.tf`
 - The "Service Account Interactive Login" rule is a plain Terraform resource — show the exception list alongside it
 - `svc_sqlbackup` is approved for interactive logins: that approval is code, visible in every PR, reviewable, auditable
 - Run a plan against the Dev cluster to show the diff before anything changes:
   ```bash
-  cd terraform/scenario2
   terraform plan
+  terraform apply --auto-approve
   ```
 - Key point: drift detection — if someone edits a rule manually in Kibana, the next `terraform apply` reverts it
 - Key point: parameterized rules (to do)
